@@ -30,8 +30,8 @@ public class DataflowPipeline {
                 .withValidation()
                 .as(CustomPipelineOptions.class);
 
-        String username = decryptKey(options.getkmsUsernameKeyId(), Base64.getDecoder().decode(options.getConfluentCloudEncryptedUsername().getBytes("UTF-8")));
-        String password = decryptKey(options.getkmsPasswordKeyId(), Base64.getDecoder().decode(options.getConfluentCloudEncryptedPassword().getBytes("UTF-8")));
+        String username = decryptKey(options.getProject(), options.getRegion(), options.getkeyRing(), options.getkmsUsernameKeyId(), Base64.getDecoder().decode(options.getConfluentCloudEncryptedUsername().getBytes("UTF-8")));
+        String password = decryptKey(options.getProject(), options.getRegion(), options.getkeyRing(), options.getkmsPasswordKeyId(), Base64.getDecoder().decode(options.getConfluentCloudEncryptedPassword().getBytes("UTF-8")));
 
         Map<String, Object> props = new HashMap<>();
         props.put("auto.offset.reset", "earliest");
@@ -68,7 +68,10 @@ public class DataflowPipeline {
 
     public static String decryptKey(String kmsKey, byte[] ciphertext) throws IOException {
         try (KeyManagementServiceClient client = KeyManagementServiceClient.create()) {
-            DecryptResponse response = client.decrypt(kmsKey, ByteString.copyFrom(ciphertext));
+
+            CryptoKeyName keyName = CryptoKeyName.of(gcpProject, location, keyRing, kmsKey);
+            DecryptResponse response = client.decrypt(keyName, ByteString.copyFrom(ciphertext));
+
             return response.getPlaintext().toStringUtf8();
         }
     }
